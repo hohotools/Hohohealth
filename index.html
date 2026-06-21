@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>血糖換算小工具 🍡</title>
+  <style>
+    /* ===== 全域設定 ===== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: linear-gradient(145deg, #e8f4fd 0%, #f0faf4 50%, #fce8f0 100%);
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC",
+                   "Microsoft JhengHei", "Segoe UI", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 48px;
+      color: #3a3a4a;
+    }
+
+    /* ===== 標題區 ===== */
+    .header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .header-icon {
+      font-size: 3rem;
+      display: block;
+      margin-bottom: 8px;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-6px); }
+    }
+
+    .header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #4a7fa5;
+      letter-spacing: 0.05em;
+      line-height: 1.3;
+    }
+
+    .header p {
+      font-size: 1rem;
+      color: #8aabb8;
+      margin-top: 6px;
+    }
+
+    /* ===== 主要容器 ===== */
+    .container {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ===== 卡片 ===== */
+    .card {
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 28px 24px;
+      box-shadow: 0 4px 24px rgba(120, 160, 200, 0.13),
+                  0 1px 4px rgba(120, 160, 200, 0.08);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 4px;
+      border-radius: 24px 24px 0 0;
+    }
+
+    .card-blue::before  { background: linear-gradient(90deg, #85c1e9, #a8d8ea); }
+    .card-mint::before  { background: linear-gradient(90deg, #7dcea0, #a9dfbf); }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .card-blue  .card-title { color: #4a7fa5; }
+    .card-mint  .card-title { color: #27ae60; }
+
+    .card-title .emoji { font-size: 1.4rem; }
+
+    /* ===== 輸入框 ===== */
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    label {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #555568;
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      background: #f5f9fd;
+      border: 2px solid #d6eaf8;
+      border-radius: 14px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .card-mint .input-row {
+      background: #f4fdf7;
+      border-color: #c9f0d8;
+    }
+
+    .input-row:focus-within {
+      border-color: #85c1e9;
+      box-shadow: 0 0 0 3px rgba(133, 193, 233, 0.18);
+    }
+
+    .card-mint .input-row:focus-within {
+      border-color: #7dcea0;
+      box-shadow: 0 0 0 3px rgba(125, 206, 160, 0.18);
+    }
+
+    input[type="number"] {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 14px 16px;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #3a3a4a;
+      outline: none;
+      -moz-appearance: textfield;
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+    }
+
+    .unit-tag {
+      padding: 0 16px 0 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .card-blue .unit-tag { color: #85c1e9; }
+    .card-mint .unit-tag { color: #7dcea0; }
+
+    /* ===== 按鈕 ===== */
+    .btn-calc {
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: 14px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: transform 0.12s, box-shadow 0.12s, filter 0.12s;
+    }
+
+    .btn-calc:active { transform: scale(0.97); }
+
+    .card-blue .btn-calc {
+      background: linear-gradient(135deg, #85c1e9, #5dade2);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(93, 173, 226, 0.35);
+    }
+
+    .card-blue .btn-calc:hover {
+      filter: brightness(1.07);
+      box-shadow: 0 6px 18px rgba(93, 173, 226, 0.45);
+    }
+
+    .card-mint .btn-calc {
+      background: linear-gradient(135deg, #7dcea0, #52be80);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(82, 190, 128, 0.35);
+    }
+
+    .card-mint .btn-calc:hover {
+      filter: brightness(1.07);
+      box-shadow: 0 6px 18px rgba(82, 190, 128, 0.45);
+    }
+
+    /* ===== 結果顯示區 ===== */
+    .result-box {
+      display: none;
+      margin-top: 18px;
+      border-radius: 16px;
+      padding: 18px 20px;
+      text-align: center;
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.88); opacity: 0; }
+      to   { transform: scale(1);    opacity: 1; }
+    }
+
+    .card-blue .result-box {
+      background: linear-gradient(135deg, #ebf5fb, #d6eaf8);
+      border: 1.5px solid #a9cce3;
+    }
+
+    .card-mint .result-box {
+      background: linear-gradient(135deg, #eafaf1, #d5f5e3);
+      border: 1.5px solid #a9dfbf;
+    }
+
+    .result-label {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #7f8c8d;
+      margin-bottom: 6px;
+    }
+
+    .result-value {
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .card-blue .result-value { color: #2471a3; }
+    .card-mint .result-value { color: #1e8449; }
+
+    .result-unit {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    .card-blue .result-unit { color: #7fb3d3; }
+    .card-mint .result-unit { color: #76b891; }
+
+    /* ===== 錯誤提示 ===== */
+    .error-msg {
+      display: none;
+      margin-top: 12px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #e07b8a;
+      text-align: center;
+      animation: shake 0.35s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25%       { transform: translateX(-6px); }
+      75%       { transform: translateX(6px); }
+    }
+
+    /* ===== 重新計算按鈕 ===== */
+    .btn-reset {
+      width: 100%;
+      padding: 15px;
+      border: 2.5px solid #e8d5e8;
+      border-radius: 14px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: #ffffff;
+      color: #b088b0;
+      letter-spacing: 0.06em;
+      transition: all 0.18s;
+    }
+
+    .btn-reset:hover {
+      background: #fdf0ff;
+      border-color: #c9a2c9;
+      color: #9b59b6;
+    }
+
+    .btn-reset:active { transform: scale(0.97); }
+
+    /* ===== 底部小字 ===== */
+    .footer {
+      margin-top: 28px;
+      font-size: 0.85rem;
+      color: #adc6d4;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    /* ===== RWD：桌機 ===== */
+    @media (min-width: 480px) {
+      .container    { max-width: 460px; }
+      .header h1    { font-size: 2rem; }
+      input[type="number"] { font-size: 1.35rem; }
+      .result-value { font-size: 2.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== 標題區 ===== -->
+  <header class="header">
+    <span class="header-icon">🍡</span>
+    <h1>血糖換算小工具</h1>
+    <p>HbA1c ↔ 平均血糖（eAG）✨</p>
+  </header>
+
+  <main class="container">
+
+    <!-- ===== 功能一：HbA1c → eAG ===== -->
+    <section class="card card-blue">
+      <div class="card-title">
+        <span class="emoji">🩸</span>
+        <span>HbA1c → 平均血糖</span>
+      </div>
+
+      <div class="input-group">
+        <label for="input-hba1c">輸入糖化血色素</label>
+        <div class="input-row">
+          <input
+            type="number"
+            id="input-hba1c"
+            placeholder="例如：7.5"
+            step="0.1"
+            min="0"
+            inputmode="decimal"
+            aria-label="糖化血色素百分比"
+          />
+          <span class="unit-tag">HbA1c %</span>
+        </div>
+      </div>
+
+      <button class="btn-calc" onclick="calcToEAG()">🔄 換算</button>
+
+      <p class="error-msg" id="err-hba1c">😊 請輸入正確的數字</p>
+
+      <div class="result-box" id="result-eag">
+        <p class="result-label">平均血糖（eAG）</p>
+        <p class="result-value" id="val-eag">—</p>
+        <p class="result-unit">mg/dL</p>
+      </div>
+    </section>
+
+    <!-- ===== 功能二：eAG → HbA1c ===== -->
+    <section class="card card-mint">
+      <div class="card-title">
+        <span class="emoji">🍉</span>
+        <span>平均血糖 → HbA1c</span>
+      </div>
+
+      <div class="input-group">
+        <label for="input-eag">輸入平均血糖</label>
+        <div class="input-row">
+          <input
+            type="number"
+            id="input-eag"
+            placeholder="例如：154"
+            step="1"
+            min="0"
+            inputmode="decimal"
+            aria-label="平均血糖 mg/dL"
+          />
+          <span class="unit-tag">mg/dL</span>
+        </div>
+      </div>
+
+      <button class="btn-calc" onclick="calcToHbA1c()">🔄 換算</button>
+
+      <p class="error-msg" id="err-eag">😊 請輸入正確的數字</p>
+
+      <div class="result-box" id="result-hba1c">
+        <p class="result-label">糖化血色素（HbA1c）</p>
+        <p class="result-value" id="val-hba1c">—</p>
+        <p class="result-unit">%</p>
+      </div>
+    </section>
+
+    <!-- ===== 功能三：重新計算 ===== -->
+    <button class="btn-reset" onclick="resetAll()">🧁 重新計算</button>
+
+  </main>
+
+  <footer class="footer">
+    ❤️ 公式：eAG = (28.7 × HbA1c) − 46.7<br>
+    HbA1c = (eAG + 46.7) ÷ 28.7
+  </footer>
+
+  <script>
+    /* ===================================================
+       功能一：HbA1c → eAG
+       公式：eAG = (28.7 × HbA1c) - 46.7，四捨五入整數
+    =================================================== */
+    function calcToEAG() {
+      var inputEl  = document.getElementById('input-hba1c');
+      var errEl    = document.getElementById('err-hba1c');
+      var resultEl = document.getElementById('result-eag');
+      var valEl    = document.getElementById('val-eag');
+
+      var val = parseFloat(inputEl.value);
+
+      if (isNaN(val) || val <= 0) {
+        showError(errEl);
+        resultEl.style.display = 'none';
+        return;
+      }
+
+      var eag = Math.round(28.7 * val - 46.7);
+      valEl.textContent      = eag;
+      resultEl.style.display = 'block';
+      errEl.style.display    = 'none';
+    }
+
+    /* ===================================================
+       功能二：eAG → HbA1c
+       公式：HbA1c = (eAG + 46.7) ÷ 28.7，保留一位小數
+    =================================================== */
+    function calcToHbA1c() {
+      var inputEl  = document.getElementById('input-eag');
+      var errEl    = document.getElementById('err-eag');
+      var resultEl = document.getElementById('result-hba1c');
+      var valEl    = document.getElementById('val-hba1c');
+
+      var val = parseFloat(inputEl.value);
+
+      if (isNaN(val) || val <= 0) {
+        showError(errEl);
+        resultEl.style.display = 'none';
+        return;
+      }
+
+      var hba1c = ((val + 46.7) / 28.7).toFixed(1);
+      valEl.textContent      = hba1c;
+      resultEl.style.display = 'block';
+      errEl.style.display    = 'none';
+    }
+
+    /* ===================================================
+       功能三：重新計算 — 清除所有輸入與結果
+    =================================================== */
+    function resetAll() {
+      document.getElementById('input-hba1c').value = '';
+      document.getElementById('input-eag').value   = '';
+
+      document.getElementById('result-eag').style.display    = 'none';
+      document.getElementById('result-hba1c').style.display  = 'none';
+      document.getElementById('err-hba1c').style.display     = 'none';
+      document.getElementById('err-eag').style.display       = 'none';
+    }
+
+    /* ===================================================
+       輔助：顯示錯誤提示（帶抖動動畫重播）
+    =================================================== */
+    function showError(el) {
+      el.style.display = 'none';
+      void el.offsetWidth; /* 強制 reflow 使動畫重新觸發 */
+      el.style.display = 'block';
+    }
+
+    /* ===================================================
+       按 Enter 鍵觸發換算
+    =================================================== */
+    document.getElementById('input-hba1c').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') calcToEAG();
+    });
+
+    document.getElementById('input-eag').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') calcToHbA1c();
+    });
+  </script>
+
+</body>
+</html>
